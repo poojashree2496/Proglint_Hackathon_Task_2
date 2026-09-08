@@ -1,0 +1,166 @@
+# =============================================================================
+# Master configuration for the custom surveillance human-detector.
+# Every script in training/ reads this file so tuning lives in one place.
+# =============================================================================
+
+project:
+  name: surveillance-human-detector
+  seed: 0
+  device: auto          # "auto" picks CUDA > MPS (Apple Silicon) > CPU
+  workspace: training/runs
+
+# -----------------------------------------------------------------------------
+# Datasets. Each entry is a source you download yourself (licenses/registration
+# vary per dataset — CrowdHuman and MOT require a free registration click-through,
+# so this pipeline cannot silently fetch them for you). `merge_datasets.py`
+# expects each one already converted to YOLO format under `converted_dir`.
+# -----------------------------------------------------------------------------
+datasets:
+  - name: crowdhuman
+    converted_dir: training/data/converted/crowdhuman
+    weight: 1.0
+    notes: >
+      Highest-value dataset for this project. ~15k train / ~4.4k val images,
+      ~470k person boxes, average 22.6 people per image with heavy mutual
+      occlusion (the "full body" + "visible body" box pairs are exactly the
+      occlusion signal a surveillance model needs). Source of most of the
+      model's crowded-scene and partial-occlusion robustness.
+
+  - name: widerperson
+    converted_dir: training/data/converted/widerperson
+    weight: 1.0
+    notes: >
+      ~13k images, dense pedestrian scenes across street/mall/campus-like
+      settings, five sub-classes (pedestrian, rider, partially-visible,
+      crowd-ignore-region, ignore) collapsed here to a single "person" class.
+      Adds outdoor street-level diversity CrowdHuman under-represents.
+
+  - name: citypersons
+    converted_dir: training/data/converted/citypersons
+    weight: 1.0
+    notes: >
+      ~5k images from Cityscapes-style urban street cameras, annotated at
+      pedestrian scale with occlusion ratio metadata. Strong for small/
+      distant pedestrians — the hardest case for CCTV mounted high and wide.
+
+  - name: mot17_mot20
+    converted_dir: training/data/converted/mot1720
+    weight: 0.6
+    notes: >
+      MOT17 (moderate crowd) + MOT20 (extreme crowd density, train-station /
+      mall-concourse footage) contribute native surveillance-camera framing,
+      motion blur from real camera/subject motion, and night/indoor lighting.
+      Lower weight because frames are highly correlated (video, not stills) —
+      oversampling them would bias the model toward a handful of scenes.
+
+  - name: coco_person
+    converted_dir: training/data/converted/coco_person
+    weight: 0.5
+    notes: >
+      COCO images filtered to the "person" category only. Contributes pose
+      diversity (sitting, running, carrying bags, sports) and general-scene
+      variety that pure-surveillance datasets lack, preventing the model
+      from overfitting to a "CCTV look". Down-weighted since COCO people are
+      mostly close-up/full-frame, unlike the small, distant, crowded CCTV
+      case this model targets.
+
+  - name: openimages_person
+    converted_dir: training/data/converted/openimages_person
+    weight: 0.4
+    notes: >
+      Open Images "Person" class subset. Broad ethnic/clothing/lighting
+      diversity at large scale, used as a long-tail top-up rather than a
+      primary source (labels are box-only, no occlusion metadata).
+
+  - name: pennfudan
+    converted_dir: training/data/converted/pennfudan
+    weight: 0.2
+    notes: >
+      Small (170 images) campus pedestrian set with pixel-accurate masks
+      converted to boxes. Too small to matter statistically; kept only
+      because its clean walking-pose annotations are useful for eval-set
+      spot checks, not training volume.
+
+# -----------------------------------------------------------------------------
+# Preprocessing
+# -----------------------------------------------------------------------------
+preprocessing:
+  target_image_size: 960        # letterboxed square canvas before YOLO's own resize
+  min_box_area_px: 36           # drop boxes smaller than 6x6px — label noise, not signal
+  min_box_side_px: 3
+  duplicate_hash_threshold: 5   # perceptual-hash Hamming distance to call two images dupes
+  blur_variance_threshold: 25.0 # Laplacian variance below this = drop as too blurry to label
+  train_split: 0.70
+  val_split: 0.20
+  test_split: 0.10
+
+# -----------------------------------------------------------------------------
+# Augmentation (Ultralytics-native knobs, applied by train.py's hyperparameters;
+# a few extra ones — fog/rain/shadow/low-light — are implemented as a custom
+# Albumentations pre-pass in prepare_dataset.py since Ultralytics has no
+# native weather simulation).
+# -----------------------------------------------------------------------------
+augmentation:
+  hsv_h: 0.015          # hue jitter — clothing/skin-tone color robustness
+  hsv_s: 0.7            # saturation jitter — camera sensor / white-balance variation
+  hsv_v: 0.5            # value/brightness jitter — day/night, exposure variation
+  degrees: 8.0           # small rotation — camera mounting isn't always level
+  translate: 0.10
+  scale: 0.5             # scale jitter — near/far camera distance variation
+  shear: 2.0
+  perspective: 0.0006    # subtle perspective warp — off-axis CCTV mounting angle
+  flipud: 0.0            # people are never upside down in CCTV — don't teach that
+  fliplr: 0.5            # mirror — doubles pose diversity for free, humans are ~symmetric
+  mosaic: 1.0            # 4-image mosaic — the single biggest lever for small/crowded-scene mAP
+  mixup: 0.10            # light mixup — regularizes against label noise from crowd datasets
+  copy_paste: 0.30       # paste people between images — directly synthesizes MORE occlusion
+                          # and crowd density, which is exactly this model's weak spot
+  erasing: 0.4           # random erasing (CutOut-style) — simulates partial occlusion by
+                          # objects/other people so the model learns partial-body cues
+  # Simulated in prepare_dataset.py's Albumentations pass (baked into the image
+  # files themselves, since Ultralytics' online augmenter has no weather ops):
+  motion_blur_prob: 0.15
+  gaussian_blur_prob: 0.10
+  fog_prob: 0.08
+  rain_prob: 0.08
+  low_light_prob: 0.15
+  shadow_prob: 0.12
+  noise_prob: 0.10
+
+# -----------------------------------------------------------------------------
+# Model / training
+# -----------------------------------------------------------------------------
+model:
+  base: yolo11s.pt        # see README "Architecture choice" for why 's' over n/m/l/x
+  imgsz: 960
+  epochs: 200
+  patience: 30             # early stopping — halt if val mAP50-95 stalls 30 epochs
+  batch: -1                # -1 = Ultralytics auto-batch (fits to available VRAM)
+  optimizer: AdamW
+  lr0: 0.001
+  lrf: 0.01                # final LR = lr0 * lrf, driven by cosine schedule
+  cos_lr: true
+  warmup_epochs: 5
+  warmup_momentum: 0.8
+  momentum: 0.937
+  weight_decay: 0.0005
+  label_smoothing: 0.0     # 0 for detection (label smoothing mainly helps classification;
+                            # with a single class it has no separating effect to smooth)
+  box: 7.5                 # box-loss gain — weighted up since localization (tight boxes on
+                            # small/occluded people) matters more than classification here
+  cls: 0.5                 # cls-loss gain — low, single-class task, little to learn there
+  dfl: 1.5
+  amp: true                 # mixed precision (fp16) — ~2x speed, fits larger batch/imgsz
+  ema: true
+  close_mosaic: 15          # disable mosaic for the last 15 epochs so the model sees
+                            # "clean" images before convergence (standard YOLO practice)
+  multi_scale: true         # randomly resize +/-50% per batch — robustness to camera
+                            # resolution/distance variety across different CCTV rigs
+  deterministic: false
+  gradient_clip: 10.0
+
+inference:
+  conf_threshold: 0.25
+  iou_threshold: 0.45
+  half: true                # fp16 inference
+  max_det: 300               # generous cap for dense-crowd surveillance frames
