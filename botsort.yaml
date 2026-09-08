@@ -1,0 +1,37 @@
+tracker_type: botsort
+
+# --- Detection gating -------------------------------------------------
+# Only detections above track_high_thresh seed/confirm tracks on the first
+# association pass; low_thresh recovers weak/partially-occluded boxes on the
+# second pass instead of dropping them (a common cause of forced ID
+# switches when a person is briefly half-hidden).
+track_high_thresh: 0.55
+track_low_thresh: 0.10
+
+# Raised so a fleeting false-positive or a heavily-occluded sliver of a
+# person does not spawn a brand-new tracklet (and therefore a brand-new
+# BoT-SORT internal id) next to an existing one.
+new_track_thresh: 0.65
+
+# How many frames a lost tracklet is kept alive inside BoT-SORT itself
+# before being dropped. 150 frames (~5s at 30 FPS) covers most walk-behind
+# occlusions and crossings without help from the outer re-id layer.
+track_buffer: 150
+
+# Association IoU/appearance-fused distance threshold. 0.8 keeps matching
+# strict enough to avoid gluing two different people together during a
+# crossing, while still tolerating normal frame-to-frame jitter.
+match_thresh: 0.80
+fuse_score: true
+
+# Camera-motion compensation via sparse optical flow keeps the predicted
+# motion model valid under camera shake/pan, which otherwise looks like
+# every person suddenly "teleporting" and triggers switches.
+gmc_method: sparseOptFlow
+
+# Appearance (ReID) embedding is what lets BoT-SORT tell apart two people
+# who cross paths or briefly overlap, instead of relying on IoU alone.
+with_reid: true
+proximity_thresh: 0.50
+appearance_thresh: 0.25
+model: auto
