@@ -1,0 +1,103 @@
+# =============================================================================
+# Master configuration for the custom surveillance human-detector.
+# Every script in training/ reads this file so tuning lives in one place.
+# =============================================================================
+
+project:
+  name: surveillance-human-detector
+  seed: 0
+  device: auto          # "auto" picks CUDA > MPS (Apple Silicon) > CPU
+  workspace: training/runs
+
+# -----------------------------------------------------------------------------
+# Datasets. Each entry is a source you download yourself (licenses/registration
+# vary per dataset — CrowdHuman and MOT require a free registration click-through,
+# so this pipeline cannot silently fetch them for you). `merge_datasets.py`
+# expects each one already converted to YOLO format under `converted_dir`.
+# -----------------------------------------------------------------------------
+datasets:
+  - name: widerperson
+    converted_dir: training/data/converted/widerperson
+    weight: 1.0
+    notes: >
+      WiderPerson dense pedestrian dataset used as the primary training source.
+
+# -----------------------------------------------------------------------------
+# Preprocessing
+# -----------------------------------------------------------------------------
+preprocessing:
+  target_image_size: 960        # letterboxed square canvas before YOLO's own resize
+  min_box_area_px: 36           # drop boxes smaller than 6x6px — label noise, not signal
+  min_box_side_px: 3
+  duplicate_hash_threshold: 5   # perceptual-hash Hamming distance to call two images dupes
+  blur_variance_threshold: 25.0 # Laplacian variance below this = drop as too blurry to label
+  train_split: 0.70
+  val_split: 0.20
+  test_split: 0.10
+
+# -----------------------------------------------------------------------------
+# Augmentation (Ultralytics-native knobs, applied by train.py's hyperparameters;
+# a few extra ones — fog/rain/shadow/low-light — are implemented as a custom
+# Albumentations pre-pass in prepare_dataset.py since Ultralytics has no
+# native weather simulation).
+# -----------------------------------------------------------------------------
+augmentation:
+  hsv_h: 0.015          # hue jitter — clothing/skin-tone color robustness
+  hsv_s: 0.7            # saturation jitter — camera sensor / white-balance variation
+  hsv_v: 0.5            # value/brightness jitter — day/night, exposure variation
+  degrees: 8.0           # small rotation — camera mounting isn't always level
+  translate: 0.10
+  scale: 0.5             # scale jitter — near/far camera distance variation
+  shear: 2.0
+  perspective: 0.0006    # subtle perspective warp — off-axis CCTV mounting angle
+  flipud: 0.0            # people are never upside down in CCTV — don't teach that
+  fliplr: 0.5            # mirror — doubles pose diversity for free, humans are ~symmetric
+  mosaic: 1.0            # 4-image mosaic — the single biggest lever for small/crowded-scene mAP
+  mixup: 0.10            # light mixup — regularizes against label noise from crowd datasets
+  copy_paste: 0.30       # paste people between images — directly synthesizes MORE occlusion
+                          # and crowd density, which is exactly this model's weak spot
+  erasing: 0.4           # random erasing (CutOut-style) — simulates partial occlusion by
+                          # objects/other people so the model learns partial-body cues
+  # Simulated in prepare_dataset.py's Albumentations pass (baked into the image
+  # files themselves, since Ultralytics' online augmenter has no weather ops):
+  motion_blur_prob: 0.15
+  gaussian_blur_prob: 0.10
+  fog_prob: 0.08
+  rain_prob: 0.08
+  low_light_prob: 0.15
+  shadow_prob: 0.12
+  noise_prob: 0.10
+
+# -----------------------------------------------------------------------------
+# Model / training
+# -----------------------------------------------------------------------------
+model:
+  base: yolo11s.pt
+  imgsz: 512
+  epochs: 30
+  patience: 10
+  batch: 8
+  optimizer: AdamW
+  lr0: 0.001
+  lrf: 0.01
+  cos_lr: true
+  warmup_epochs: 3
+  warmup_momentum: 0.8
+  momentum: 0.937
+  weight_decay: 0.0005
+  label_smoothing: 0.0
+  box: 7.5
+  cls: 0.5
+  dfl: 1.5
+  amp: false
+  ema: true
+  close_mosaic: 5
+  multi_scale: false
+  deterministic: false
+  gradient_clip: 10.0
+
+inference:
+  conf_threshold: 0.25
+  iou_threshold: 0.45
+  half: true                # fp16 inference
+  max_det: 300               # generous cap for dense-crowd surveillance frames
