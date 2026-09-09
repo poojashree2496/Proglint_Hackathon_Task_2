@@ -130,34 +130,37 @@ augmentation:
 # -----------------------------------------------------------------------------
 # Model / training
 # -----------------------------------------------------------------------------
-# -----------------------------------------------------------------------------
-# Model / training
-# -----------------------------------------------------------------------------
 model:
-  base: yolo11s.pt
+  base: yolo11s.pt        # see README "Architecture choice" for why 's' over n/m/l/x
   imgsz: 960
-  epochs: 60
-  patience: 15
-  batch: 4
-
+  epochs: 200
+  patience: 30             # early stopping — halt if val mAP50-95 stalls 30 epochs
+  batch: -1                # -1 = Ultralytics auto-batch (fits to available VRAM)
   optimizer: AdamW
   lr0: 0.001
-  lrf: 0.01
+  lrf: 0.01                # final LR = lr0 * lrf, driven by cosine schedule
   cos_lr: true
-
   warmup_epochs: 5
   warmup_momentum: 0.8
   momentum: 0.937
   weight_decay: 0.0005
-
-  label_smoothing: 0.0
-
-  box: 7.5
-  cls: 0.5
+  label_smoothing: 0.0     # 0 for detection (label smoothing mainly helps classification;
+                            # with a single class it has no separating effect to smooth)
+  box: 7.5                 # box-loss gain — weighted up since localization (tight boxes on
+                            # small/occluded people) matters more than classification here
+  cls: 0.5                 # cls-loss gain — low, single-class task, little to learn there
   dfl: 1.5
-
-  amp: true
-  close_mosaic: 15
-  multi_scale: false
+  amp: true                 # mixed precision (fp16) — ~2x speed, fits larger batch/imgsz
+  ema: true
+  close_mosaic: 15          # disable mosaic for the last 15 epochs so the model sees
+                            # "clean" images before convergence (standard YOLO practice)
+  multi_scale: true         # randomly resize +/-50% per batch — robustness to camera
+                            # resolution/distance variety across different CCTV rigs
   deterministic: false
+  gradient_clip: 10.0
 
+inference:
+  conf_threshold: 0.25
+  iou_threshold: 0.45
+  half: true                # fp16 inference
+  max_det: 300               # generous cap for dense-crowd surveillance frames

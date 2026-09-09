@@ -42,7 +42,8 @@ def main():
     model_cfg = config["model"]
     aug_cfg = config["augmentation"]
 
-    model = YOLO(model_cfg["base"])
+    resume_path = TRAINING_ROOT / "runs" / "surveillance_human_detector" / "weights" / "last.pt"
+    model = YOLO(str(resume_path) if args.resume and resume_path.exists() else model_cfg["base"])
 
     print(f"Training on device: {device}")
     print(f"Data config: {data_yaml}")
