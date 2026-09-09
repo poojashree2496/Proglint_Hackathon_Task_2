@@ -161,3 +161,8 @@ model:
   multi_scale: false
   deterministic: false
 
+  
+inference:
+  half: false
+
+
