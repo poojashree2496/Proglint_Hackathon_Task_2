@@ -1,0 +1,6 @@
+path: /home/student/Proglint_Hackathon_Task_2/training/data/final
+train: images/train
+val: images/val
+test: images/test
+names:
+  0: person
