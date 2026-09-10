@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Smart Surveillance AI</title>
+
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background: #0f172a;
+            color: white;
+            min-height: 100vh;
+        }
+
+        .container {
+            width: 90%;
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 60px 20px;
+            text-align: center;
+        }
+
+        h1 {
+            font-size: 42px;
+            margin-bottom: 10px;
+        }
+
+        .subtitle {
+            color: #94a3b8;
+            font-size: 18px;
+            margin-bottom: 45px;
+        }
+
+        .card {
+            background: #1e293b;
+            border: 2px dashed #475569;
+            border-radius: 20px;
+            padding: 50px;
+        }
+
+        h2 {
+            margin-bottom: 30px;
+        }
+
+        input[type="file"] {
+            background: white;
+            color: black;
+            padding: 12px;
+            border-radius: 8px;
+            width: 100%;
+            max-width: 450px;
+        }
+
+        button {
+            display: block;
+            margin: 30px auto 20px;
+            padding: 16px 35px;
+            border: none;
+            border-radius: 10px;
+            background: #2563eb;
+            color: white;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background: #1d4ed8;
+        }
+
+        .status {
+            color: #22c55e;
+            margin-top: 20px;
+            font-weight: bold;
+        }
+
+        .info {
+            margin-top: 30px;
+            color: #94a3b8;
+            font-size: 14px;
+        }
+
+        #loading {
+            display: none;
+            margin-top: 25px;
+            color: #facc15;
+        }
+
+        .spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #475569;
+            border-top: 3px solid #facc15;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            vertical-align: middle;
+            margin-right: 10px;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+<div class="container">
+
+    <h1>🛡️ Smart Surveillance AI</h1>
+
+    <div class="subtitle">
+        AI-powered person detection and tracking
+    </div>
+
+    <div class="card">
+
+        <h2>Upload Surveillance Video</h2>
+
+        <form
+            action="/upload"
+            method="POST"
+            enctype="multipart/form-data"
+            onsubmit="startProcessing()"
+        >
+
+            <input
+                type="file"
+                name="video"
+                accept=".mp4,.avi,.mov,.mkv"
+                required
+            >
+
+            <button type="submit">
+                ▶ Start Analysis
+            </button>
+
+        </form>
+
+        <div id="loading">
+            <span class="spinner"></span>
+            AI is processing your video... Please wait.
+        </div>
+
+        <div class="status">
+            ✓ YOLO11s Custom Human Model Ready
+        </div>
+
+        <div class="info">
+            Supported formats: MP4, AVI, MOV, MKV
+        </div>
+
+    </div>
+
+</div>
+
+<script>
+function startProcessing() {
+    document.querySelector("button").disabled = true;
+    document.querySelector("button").innerText = "Processing...";
+    document.getElementById("loading").style.display = "block";
+}
+</script>
+
+</body>
+</html>
+

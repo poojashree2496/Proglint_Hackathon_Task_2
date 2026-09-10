@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+
+    <title>Processing Error</title>
+
+    <style>
+        body {
+            margin: 0;
+            background: #0f172a;
+            color: white;
+            font-family: Arial, sans-serif;
+            text-align: center;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 80px auto;
+            padding: 30px;
+        }
+
+        .error {
+            background: #1e293b;
+            border: 1px solid #ef4444;
+            border-radius: 12px;
+            padding: 30px;
+            text-align: left;
+            white-space: pre-wrap;
+            color: #fca5a5;
+            overflow-x: auto;
+        }
+
+        a {
+            display: inline-block;
+            margin-top: 25px;
+            padding: 14px 25px;
+            background: #2563eb;
+            color: white;
+            text-decoration: none;
+            border-radius: 8px;
+        }
+    </style>
+</head>
+
+<body>
+
+<div class="container">
+
+    <h1>⚠️ Processing Failed</h1>
+
+    <div class="error">{{ error }}</div>
+
+    <a href="/">
+        ← Try Again
+    </a>
+
+</div>
+
+</body>
+</html>
+

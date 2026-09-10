@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+
+    <title>Analysis Result</title>
+
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            background: #0f172a;
+            color: white;
+            font-family: Arial, sans-serif;
+        }
+
+        .container {
+            width: 92%;
+            max-width: 1200px;
+            margin: auto;
+            padding: 40px 20px;
+            text-align: center;
+        }
+
+        h1 {
+            font-size: 38px;
+        }
+
+        .success {
+            color: #22c55e;
+            font-size: 20px;
+            margin: 20px;
+        }
+
+        .video-container {
+            background: #1e293b;
+            padding: 25px;
+            border-radius: 15px;
+            margin-top: 30px;
+        }
+
+        video {
+            width: 100%;
+            max-height: 650px;
+            border-radius: 10px;
+            background: black;
+        }
+
+        .filename {
+            color: #94a3b8;
+            margin-top: 15px;
+        }
+
+        .button {
+            display: inline-block;
+            margin-top: 25px;
+            padding: 14px 25px;
+            background: #2563eb;
+            color: white;
+            text-decoration: none;
+            border-radius: 8px;
+        }
+
+        .button:hover {
+            background: #1d4ed8;
+        }
+    </style>
+</head>
+
+<body>
+
+<div class="container">
+
+    <h1>🛡️ Smart Surveillance AI</h1>
+
+    <div class="success">
+        ✓ Analysis Completed Successfully
+    </div>
+
+    <div class="video-container">
+
+        <video controls autoplay>
+            <source
+                src="{{ url_for('output_video', filename=video_name) }}"
+                type="video/mp4"
+            >
+
+            Your browser does not support video playback.
+        </video>
+
+        <div class="filename">
+            Output: {{ video_name }}
+        </div>
+
+    </div>
+
+    <a class="button" href="/">
+        ← Analyze Another Video
+    </a>
+
+</div>
+
+</body>
+</html>
+
